@@ -26,7 +26,9 @@ use sp_runtime::{
 		Hash as HashT, BlakeTwo256, Saturating, One, Zero, Dispatchable,
 		AccountIdConversion, BadOrigin, Convert, SignedExtension, AppVerify,
 	},
-	transaction_validity::{TransactionValidityError, ValidTransaction, TransactionValidity},
+	transaction_validity::{
+		TransactionValidityError, ValidTransaction, TransactionValidity, TransactionSource,
+	},
 };
 use sp_staking::{
 	SessionIndex,
@@ -1467,6 +1469,7 @@ impl<T: Trait + Send + Sync> SignedExtension for ValidateDoubleVoteReports<T> wh
 	fn validate(
 		&self,
 		_who: &Self::AccountId,
+		_source: TransactionSource,
 		call: &Self::Call,
 		_info: DispatchInfo,
 		_len: usize,

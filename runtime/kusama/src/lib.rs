@@ -108,9 +108,14 @@ impl SignedExtension for RestrictFunctionality {
 
 	fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> { Ok(()) }
 
-	fn validate(&self, _: &Self::AccountId, call: &Self::Call, _: DispatchInfo, _: usize)
-		-> TransactionValidity
-	{
+	fn validate(
+		&self,
+		_: &Self::AccountId,
+		_: TransactionSource,
+		call: &Self::Call,
+		_: DispatchInfo,
+		_: usize,
+	) -> TransactionValidity {
 		match call {
 			Call::Slots(_) | Call::Registrar(_)
 				=> Err(InvalidTransaction::Custom(ValidityError::NoPermission.into()).into()),
@@ -753,7 +758,7 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Nonce, Call>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Runtime, AllModules>;
+pub type Executive = executive::Executive<Runtime, Block, system::ChainContext<Runtime>, AllModules>;
 
 sp_api::impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {

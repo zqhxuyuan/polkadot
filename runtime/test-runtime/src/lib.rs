@@ -104,9 +104,14 @@ impl SignedExtension for RestrictFunctionality {
 
 	fn additional_signed(&self) -> rstd::result::Result<(), TransactionValidityError> { Ok(()) }
 
-	fn validate(&self, _: &Self::AccountId, call: &Self::Call, _: DispatchInfo, _: usize)
-		-> TransactionValidity
-	{
+	fn validate(
+		&self,
+		_: &Self::AccountId,
+		_: TransactionSource,
+		call: &Self::Call,
+		_: DispatchInfo,
+		_: usize,
+	) -> TransactionValidity {
 		match call {
 			Call::Slots(_) | Call::Registrar(_)
 				=> Err(InvalidTransaction::Custom(ValidityError::NoPermission.into()).into()),
