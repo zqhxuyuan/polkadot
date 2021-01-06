@@ -17,7 +17,7 @@ color-eyre = "0.5.10"
 thiserror = "1.0.23"
 futures = "0.3.8"
 service = { package = "polkadot-service", path = "node/service" }
-parity-util-mem = { version = "*", default-features = false, features = ["jemalloc-global"] }
+tcmalloc = "0.3.0"
 
 [dev-dependencies]
 assert_cmd = "1.0.2"

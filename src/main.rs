@@ -20,6 +20,9 @@
 
 use color_eyre::eyre;
 
+#[global_allocator]
+static GLOBAL: tcmalloc::TCMalloc = tcmalloc::TCMalloc;
+
 fn main() -> eyre::Result<()> {
 	color_eyre::install()?;
 	cli::run()?;
