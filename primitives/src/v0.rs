@@ -895,6 +895,16 @@ impl<Payload: EncodeAs<RealPayload>, RealPayload: Encode> Signed<Payload, RealPa
 		if self.signature.verify(data.as_slice(), key) { Ok(()) } else { Err(()) }
 	}
 
+	/// Validate the real payload given the context and public key.
+	pub fn check_signature_from_real_payload<H: Encode>(
+		context: &SigningContext<H>,
+		key: &ValidatorId,
+		real_payload: &RealPayload,
+	) -> Result<(), ()> {
+		let data = (real_payload, context).encode();
+		if self.signature.verify(data.as_slice(), key) { Ok(()) } else { Err(()) }
+	}
+
 	/// Immutably access the payload.
 	#[inline]
 	pub fn payload(&self) -> &Payload {
