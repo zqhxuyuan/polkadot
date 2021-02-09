@@ -1102,11 +1102,13 @@ mod tests {
 		let untyped: <BeefySignature as sp_application_crypto::AppKey>::UntypedGeneric = signature.into();
 		let public = untyped.recover(message).unwrap();
 		println!("Public: {:?}", public);
-		let public = secp256k1::PublicKey::parse_compressed(&*public.0).unwrap();
+		let public = secp256k1::PublicKey::parse_compressed(&public.0).unwrap();
 		println!("Uncompressed: {:?}", hex::encode(public.serialize()));
 
-		println!("Keccak256: {:?}", sp_core::keccak_256(&*public.serialize()));
+		println!("Keccak256: {:?}", hex::encode(
+			sp_core::keccak_256(&public.serialize())
+		));
 
-		assert_eq!(public, Some(Default::default()));
+		assert_eq!(true, false);
 	}
 }
