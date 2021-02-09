@@ -99,8 +99,11 @@ polkadot-statement-distribution = { path = "../network/statement-distribution", 
 polkadot-approval-distribution = { path = "../network/approval-distribution", optional = true }
 
 [dev-dependencies]
+sp-application-crypto = { git = "https://github.com/paritytech/substrate", branch = "master" }
 polkadot-test-client = { path = "../test/client" }
 env_logger = "0.8.2"
+parity-scale-codec = "2.0"
+hex = "0.4"
 
 [features]
 default = ["db", "full-node"]

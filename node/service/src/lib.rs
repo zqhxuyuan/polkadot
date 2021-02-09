@@ -1067,3 +1067,38 @@ pub fn build_full(
 		).map(|full| full.with_client(Client::Polkadot))
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use sp_core::H256;
+	use polkadot_primitives::v1::BlockNumber;
+	use parity_scale_codec::Encode;
+	use hex_literal::hex;
+
+	#[test]
+	fn beefy_test() {
+		let signature = hex!(
+			"c557781c98f8ba8f8025accf037b83e4861101712e7cf316474f7d2f05f1894f55ea99db6a735d004e226b3aa5d3537b301bfedf1b4a095110eb7afc05b0563700"
+		).to_vec();
+		let signature: BeefySignature = signature.try_into().unwrap();
+
+		let payload = H256::from_slice(&hex!(
+			"a148e08efa4936efd7fb46109a917ee24ded43e230625da90a123929e1f9b8a5"
+		));
+		let block_number: BlockNumber = 1366;
+		let validator_set_id = 0;
+		let commitment = beefy_primitives::Commitment {
+			payload,
+			block_number,
+			validator_set_id,
+		};
+		let message = commitment.encode();
+
+		println!("Message: {}", hex::encode(&message));
+		let untyped: <BeefySignature as sp_application_crypto::AppKey>::UntypedGeneric = signature.into();
+		let public = untyped.recover(message);
+		println!("Public: {:?}", public);
+		assert_eq!(public, Some(Default::default()));
+	}
+}
