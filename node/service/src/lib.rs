@@ -1079,8 +1079,8 @@ mod tests {
 	#[test]
 	fn beefy_test() {
 		let signature = hex!(
-			//"c557781c98f8ba8f8025accf037b83e4861101712e7cf316474f7d2f05f1894f55ea99db6a735d004e226b3aa5d3537b301bfedf1b4a095110eb7afc05b0563700"
-			"bdb33475db0157a6f93d12b72c6ed78e3ec6fd5f09cdf79d01da11603fa594bd73240f9823995c71ee6b62062603cca9fd7184d0c249e821f928db010af671a100"
+			"c557781c98f8ba8f8025accf037b83e4861101712e7cf316474f7d2f05f1894f55ea99db6a735d004e226b3aa5d3537b301bfedf1b4a095110eb7afc05b0563700"
+			// "bdb33475db0157a6f93d12b72c6ed78e3ec6fd5f09cdf79d01da11603fa594bd73240f9823995c71ee6b62062603cca9fd7184d0c249e821f928db010af671a100"
 		).to_vec();
 		let signature: BeefySignature = signature.try_into().unwrap();
 
@@ -1106,7 +1106,7 @@ mod tests {
 		println!("Uncompressed: {:?}", hex::encode(public.serialize()));
 
 		println!("Keccak256: {:?}", hex::encode(
-			sp_core::keccak_256(&public.serialize())
+			sp_core::keccak_256(&public.serialize()[1..])
 		));
 
 		assert_eq!(true, false);
