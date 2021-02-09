@@ -5990,6 +5990,7 @@ dependencies = [
  "hex",
  "hex-literal",
  "kusama-runtime",
+ "libsecp256k1",
  "pallet-babe",
  "pallet-im-online",
  "pallet-staking",
