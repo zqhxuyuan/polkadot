@@ -28,5 +28,5 @@ frame-rpc-system = { package = "substrate-frame-rpc-system", git = "https://gith
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "master" }
 parity-scale-codec = { version = "2.0.0", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "master" }
-beefy-gadget = { git = "https://github.com/paritytech/grandpa-bridge-gadget", branch = "master" }
-beefy-gadget-rpc = { git = "https://github.com/paritytech/grandpa-bridge-gadget", branch = "master" }
+beefy-gadget = { path = "../beefy/beefy-gadget" }
+beefy-gadget-rpc = { path = "../beefy/beefy-gadget/rpc" }
