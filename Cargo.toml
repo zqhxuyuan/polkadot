@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+	"bin/*/node",
+	"bin/*/runtime",
+	"fuzz/*",
+	"modules/*",
+	"primitives/*",
+	"relays/*",
+]
