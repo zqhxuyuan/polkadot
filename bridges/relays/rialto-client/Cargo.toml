@@ -17,9 +17,9 @@ rialto-runtime = { path = "../../bin/rialto/runtime" }
 
 # Substrate Dependencies
 
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "master" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "master" }
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "master" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "master" }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "apopiak-xcm-origin" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "apopiak-xcm-origin" }
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "apopiak-xcm-origin" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "apopiak-xcm-origin" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "apopiak-xcm-origin" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "apopiak-xcm-origin" }
