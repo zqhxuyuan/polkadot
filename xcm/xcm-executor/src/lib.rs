@@ -152,6 +152,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 				Some((Assets::from(assets), effects))
 			}
 			(origin, Xcm::Transact { origin_type, require_weight_at_most,  mut call }) => {
+				log::debug!(target: "runtime::xcm::transact","transacting");
 				// We assume that the Relay-chain is allowed to use transact on this parachain.
 
 				// TODO: #2841 #TRANSACTFILTER allow the trait to issue filters for the relay-chain
@@ -160,9 +161,14 @@ impl<Config: config::Config> XcmExecutor<Config> {
 					.map_err(|_| XcmError::BadOrigin)?;
 				let weight = message_call.get_dispatch_info().weight;
 				ensure!(weight <= require_weight_at_most, XcmError::TooMuchWeightRequired);
+				log::debug!(target: "runtime::xcm::transact","{:?} | {:?} | {:?}", message_call, dispatch_origin, weight);
 				let actual_weight = match message_call.dispatch(dispatch_origin) {
-					Ok(post_info) => post_info.actual_weight,
+					Ok(post_info) => {
+						log::debug!(target: "runtime::xcm::transact","executed call");
+						post_info.actual_weight
+					},
 					Err(error_and_info) => {
+						log::debug!(target: "runtime::xcm::transact","call errored");
 						// Not much to do with the result as it is. It's up to the parachain to ensure that the
 						// message makes sense.
 						error_and_info.post_info.actual_weight
