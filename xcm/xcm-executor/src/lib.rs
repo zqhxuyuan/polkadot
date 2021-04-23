@@ -93,9 +93,12 @@ impl<Config: config::Config> XcmExecutor<Config> {
 		let shallow_weight = maybe_shallow_weight
 			.or_else(|| Config::Weigher::shallow(&mut message).ok())
 			.ok_or(XcmError::WeightNotComputable)?;
+		log::debug!(target: "runtime::xcm::execute","shallow_weight: {:?}", shallow_weight);
 
 		Config::Barrier::should_execute(&origin, top_level, &message, shallow_weight, weight_credit)
 			.map_err(|()| XcmError::Barrier)?;
+
+		log::debug!(target: "runtime::xcm::execute","passed barrier");
 
 		// The surplus weight, defined as the amount by which `shallow_weight` plus all nested
 		// `shallow_weight` values (ensuring no double-counting) is an overestimate of the actual weight
