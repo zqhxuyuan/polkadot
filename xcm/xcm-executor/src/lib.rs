@@ -161,11 +161,13 @@ impl<Config: config::Config> XcmExecutor<Config> {
 
 				// TODO: #2841 #TRANSACTFILTER allow the trait to issue filters for the relay-chain
 				let message_call = call.take_decoded().map_err(|_| XcmError::FailedToDecode)?;
+				log::debug!(target: "runtime::xcm::transact","call: {:?}", message_call);
 				let dispatch_origin = Config::OriginConverter::convert_origin(origin, origin_type)
 					.map_err(|_| XcmError::BadOrigin)?;
+					log::debug!(target: "runtime::xcm::transact","converted origin");
 				let weight = message_call.get_dispatch_info().weight;
+				log::debug!(target: "runtime::xcm::transact","weight: {:?}, weight_at_most: {:?}", weight, require_weight_at_most);
 				ensure!(weight <= require_weight_at_most, XcmError::TooMuchWeightRequired);
-				log::debug!(target: "runtime::xcm::transact","{:?} | {:?}", message_call, weight);
 				let actual_weight = match message_call.dispatch(dispatch_origin) {
 					Ok(post_info) => {
 						log::debug!(target: "runtime::xcm::transact","executed call");
