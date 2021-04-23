@@ -87,6 +87,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 		maybe_shallow_weight: Option<Weight>,
 		trader: &mut Config::Trader,
 	) -> Result<Weight, XcmError> {
+		log::debug!(target: "runtime::xcm::execute","executing message: {:?}", &message);
 		// This is the weight of everything that cannot be paid for. This basically means all computation
 		// except any XCM which is behind an Order::BuyExecution.
 		let shallow_weight = maybe_shallow_weight
