@@ -174,7 +174,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 						post_info.actual_weight
 					},
 					Err(error_and_info) => {
-						log::debug!(target: "runtime::xcm::transact","call errored");
+						log::debug!(target: "runtime::xcm::transact", "call errored: {:?}", error_and_info);
 						// Not much to do with the result as it is. It's up to the parachain to ensure that the
 						// message makes sense.
 						error_and_info.post_info.actual_weight
