@@ -161,7 +161,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 					.map_err(|_| XcmError::BadOrigin)?;
 				let weight = message_call.get_dispatch_info().weight;
 				ensure!(weight <= require_weight_at_most, XcmError::TooMuchWeightRequired);
-				log::debug!(target: "runtime::xcm::transact","{:?} | {:?} | {:?}", message_call, dispatch_origin, weight);
+				log::debug!(target: "runtime::xcm::transact","{:?} | {:?}", message_call, weight);
 				let actual_weight = match message_call.dispatch(dispatch_origin) {
 					Ok(post_info) => {
 						log::debug!(target: "runtime::xcm::transact","executed call");
