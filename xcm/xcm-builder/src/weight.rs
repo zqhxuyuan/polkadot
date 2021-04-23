@@ -23,11 +23,13 @@ use frame_support::weights::{Weight, GetDispatchInfo, WeightToFeePolynomial};
 use xcm_executor::{Assets, traits::{WeightBounds, WeightTrader}};
 
 pub struct FixedWeightBounds<T, C>(PhantomData<(T, C)>);
-impl<T: Get<Weight>, C: Decode + GetDispatchInfo> WeightBounds<C> for FixedWeightBounds<T, C> {
+impl<T: Get<Weight>, C: Decode + GetDispatchInfo + sp_std::fmt::Debug> WeightBounds<C> for FixedWeightBounds<T, C> {
 	fn shallow(message: &mut Xcm<C>) -> Result<Weight, ()> {
 		let min = match message {
 			Xcm::Transact { call, .. } => {
-				call.ensure_decoded()?.get_dispatch_info().weight + T::get()
+				let decoded = call.ensure_decoded();
+				log::debug!(target: "runtime::xcm::shallow", "decoded call: {:?}", &decoded);
+				decoded?.get_dispatch_info().weight + T::get()
 			}
 			Xcm::WithdrawAsset { effects, .. }
 			| Xcm::ReserveAssetDeposit { effects, .. }
@@ -139,7 +141,7 @@ impl<
 	OnUnbalanced: OnUnbalancedT<Currency::NegativeImbalance>,
 > WeightTrader for UsingComponents<WeightToFee, AssetId, AccountId, Currency, OnUnbalanced> {
 	fn new() -> Self { Self(0, Zero::zero(), PhantomData) }
-	
+
 	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, Error> {
 		let amount = WeightToFee::calc(&weight);
 		let required = MultiAsset::ConcreteFungible {
