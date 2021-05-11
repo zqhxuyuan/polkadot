@@ -564,7 +564,7 @@ impl<T: Config> Module<T> {
 	/// Calculate the final winners from the winning slots.
 	///
 	/// This is a simple dynamic programming algorithm designed by Al, the original code is at:
-	/// https://github.com/w3f/consensus/blob/master/NPoS/auctiondynamicthing.py
+	/// https://github.com/w3f/consensus/blob/statemint/NPoS/auctiondynamicthing.py
 	fn calculate_winners(
 		mut winning: WinningData<T>
 	) -> WinnersData<T> {
