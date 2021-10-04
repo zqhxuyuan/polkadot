@@ -22,6 +22,7 @@ use sp_runtime::traits::AccountIdConversion;
 use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
 pub const ALICE: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([0u8; 32]);
+pub const BOB: sp_runtime::AccountId32 = sp_runtime::AccountId32::new([1u8; 32]);
 pub const INITIAL_BALANCE: u128 = 1_000_000_000;
 
 decl_test_parachain! {
@@ -69,7 +70,10 @@ pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
 
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(ALICE, INITIAL_BALANCE)] }
+	pallet_balances::GenesisConfig::<Runtime> {
+		balances: vec![
+			(ALICE, INITIAL_BALANCE)]
+	}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
@@ -87,7 +91,9 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
 	pallet_balances::GenesisConfig::<Runtime> {
-		balances: vec![(ALICE, INITIAL_BALANCE), (para_account_id(1), INITIAL_BALANCE)],
+		balances: vec![
+			(ALICE, INITIAL_BALANCE),
+			(para_account_id(1), INITIAL_BALANCE)],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
@@ -99,6 +105,7 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 
 pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay_chain::Runtime>;
 pub type ParachainPalletXcm = pallet_xcm::Pallet<parachain::Runtime>;
+pub type RelayChainProxyPallet = pallet_proxy::Pallet<relay_chain::Runtime>;
 
 #[cfg(test)]
 mod tests {
@@ -108,6 +115,7 @@ mod tests {
 	use frame_support::assert_ok;
 	use xcm::latest::prelude::*;
 	use xcm_simulator::TestExt;
+	use crate::relay_chain::ProxyType;
 
 	// Helper function for forming buy execution message
 	fn buy_execution<C>(fees: impl Into<MultiAsset>) -> Instruction<C> {
@@ -140,6 +148,54 @@ mod tests {
 				.iter()
 				.any(|r| matches!(r.event, Event::System(frame_system::Event::Remarked(_, _)))));
 		});
+	}
+
+	#[test]
+	fn simple_proxy_works() {
+		MockNet::reset();
+
+		Relay::execute_with(|| {
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE);
+			assert_eq!(relay_chain::Balances::free_balance(&ALICE), INITIAL_BALANCE);
+			assert_eq!(relay_chain::Balances::free_balance(&BOB), 0);
+
+			// this data should be consider with Proxy config on relay_chain runtime
+			let Proxy_Fee: u128 = 1000;
+
+			// make the call to be proxying
+			let call = Box::new(relay_chain::Call::Balances(
+				pallet_balances::Call::<relay_chain::Runtime>::transfer {
+					dest: BOB, // transfer money to Bob, which means Bob can spend Alice's money
+					value: 1000,
+				},
+			));
+
+			// Alice proxy to Bob
+			assert_ok!(RelayChainProxyPallet::add_proxy(
+				relay_chain::Origin::signed(ALICE),
+				BOB,
+				ProxyType::Any,
+				0
+			));
+
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE - Proxy_Fee);
+
+			// Bob can do Alice's job
+			relay_chain::Proxy::proxy(
+				relay_chain::Origin::signed(BOB),
+				ALICE,
+				None,
+				call.clone() // do the transfer
+			);
+
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE - Proxy_Fee * 2);
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&BOB), Proxy_Fee);
+		});
+	}
+
+	#[test]
+	fn proxy_xcmp() {
+
 	}
 
 	#[test]
@@ -204,26 +260,44 @@ mod tests {
 		let withdraw_amount = 123;
 
 		Relay::execute_with(|| {
+			// initial balance of Alice and para_1
+			assert_eq!(pallet_balances::Pallet::<parachain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE);
+			assert_eq!(parachain::Balances::free_balance(&para_account_id(1)), INITIAL_BALANCE);
+
+			// transfer
 			assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
+				// origin
 				relay_chain::Origin::signed(ALICE),
+				// dest
 				Box::new(X1(Parachain(1)).into().into()),
+				// benificiary
 				Box::new(X1(AccountId32 { network: Any, id: ALICE.into() }).into().into()),
+				// Box::new(X1(AccountId32 { network: Any, id: BOB.into() }).into().into()),
+				// !!!assets!!!
+				// 资产类型为中继链的native token，如果想要转账平行链的资产，需要引入Currency与Location的映射关系
+				// MultiLocation + amount -> MultiAssets
 				Box::new((Here, withdraw_amount).into()),
 				0,
 			));
-			assert_eq!(
-				parachain::Balances::free_balance(&para_account_id(1)),
-				INITIAL_BALANCE + withdraw_amount
-			);
+
+			// result
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE - withdraw_amount);
+			assert_eq!(pallet_balances::Pallet::<parachain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE - withdraw_amount);
+			assert_eq!(parachain::Balances::free_balance(&para_account_id(1)), INITIAL_BALANCE + withdraw_amount);
 		});
 
 		ParaA::execute_with(|| {
+			assert_eq!(parachain::Balances::free_balance(&para_account_id(1)), 0);
+
 			// free execution, full amount received
-			assert_eq!(
-				pallet_balances::Pallet::<parachain::Runtime>::free_balance(&ALICE),
-				INITIAL_BALANCE + withdraw_amount
-			);
+			assert_eq!(pallet_balances::Pallet::<parachain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE + withdraw_amount);
+			// assert_eq!(pallet_balances::Pallet::<parachain::Runtime>::free_balance(&BOB), withdraw_amount);
 		});
+	}
+
+
+	fn reserve_transfer_by_hand() {
+
 	}
 
 	/// Scenario:
@@ -238,6 +312,7 @@ mod tests {
 
 		ParaA::execute_with(|| {
 			let message = Xcm(vec![
+				// 和上面reserve_transfer中的assets类似，MultiAssets都是(Here,amount).into()
 				WithdrawAsset((Here, send_amount).into()),
 				buy_execution((Here, send_amount)),
 				DepositAsset {

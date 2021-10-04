@@ -11887,6 +11887,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
+ "pallet-proxy",
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-core-primitives",
