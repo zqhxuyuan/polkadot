@@ -38,15 +38,22 @@ impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone
 /// A [`MultiLocation`] consisting of a single `Parent` [`Junction`] will be converted to the
 /// default value of `AccountId` (e.g. all zeros for `AccountId32`).
 pub struct ParentIsDefault<AccountId>(PhantomData<AccountId>);
-impl<AccountId: Default + Eq + Clone> Convert<MultiLocation, AccountId>
+impl<AccountId: Default + Eq + Clone + From<[u8; 32]>> Convert<MultiLocation, AccountId>
 	for ParentIsDefault<AccountId>
 {
 	fn convert_ref(location: impl Borrow<MultiLocation>) -> Result<AccountId, ()> {
-		if location.borrow().contains_parents_only(1) {
-			Ok(AccountId::default())
-		} else {
-			Err(())
+		match location.borrow() {
+			MultiLocation { parents: 1, interior: Here } => Ok(AccountId::default()),
+			MultiLocation { parents: 1, interior: X1(AccountId32 { id, network: NetworkId::Any }) } => {
+				Ok((*id).into())
+			}
+			_ => Err(())
 		}
+		// if location.borrow().contains_parents_only(1) {
+		// 	Ok(AccountId::default())
+		// } else {
+		// 	Err(())
+		// }
 	}
 
 	fn reverse_ref(who: impl Borrow<AccountId>) -> Result<MultiLocation, ()> {

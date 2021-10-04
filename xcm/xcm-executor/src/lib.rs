@@ -117,7 +117,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 	) -> Result<Weight, XcmError> {
 		log::trace!(
 			target: "xcm::do_execute_xcm",
-			"origin: {:?}, top_level: {:?}, message: {:?}, weight_credit: {:?}, maybe_shallow_weight: {:?}, recursion: {:?}",
+			"do_execute_xcm origin: {:?}, top_level: {:?}, message: {:?}, weight_credit: {:?}, maybe_shallow_weight: {:?}, recursion: {:?}",
 			origin,
 			top_level,
 			message,
@@ -210,11 +210,22 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			},
 			(origin, Xcm::Transact { origin_type, require_weight_at_most, mut call }) => {
 				// We assume that the Relay-chain is allowed to use transact on this parachain.
+				log::trace!(
+					target: "xcm::do_execute_xcm",
+					"do_execute_xcm origin: {:?}",
+					origin,
+				);
 
 				// TODO: #2841 #TRANSACTFILTER allow the trait to issue filters for the relay-chain
 				let message_call = call.take_decoded().map_err(|_| XcmError::FailedToDecode)?;
 				let dispatch_origin = Config::OriginConverter::convert_origin(origin, origin_type)
 					.map_err(|_| XcmError::BadOrigin)?;
+				// log::trace!(
+				// 	target: "xcm::do_execute_xcm",
+				// 	"dispatch_origin origin: {:?}",
+				// 	dispatch_origin,
+				// );
+
 				let weight = message_call.get_dispatch_info().weight;
 				ensure!(weight <= require_weight_at_most, XcmError::TooMuchWeightRequired);
 				let actual_weight = match message_call.dispatch(dispatch_origin) {
@@ -246,6 +257,12 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			(origin, Xcm::RelayedFrom { who, message }) => {
 				let mut origin = origin;
 				origin.append_with(who).map_err(|_| XcmError::MultiLocationFull)?;
+				log::trace!(
+					target: "xcm::do_execute_xcm",
+					"RelayedFrom origin: {:?}",
+					origin,
+				);
+
 				let surplus = Self::do_execute_xcm(
 					origin,
 					top_level,
