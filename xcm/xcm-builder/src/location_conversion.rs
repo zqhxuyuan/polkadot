@@ -21,6 +21,8 @@ use sp_runtime::traits::AccountIdConversion;
 use sp_std::{borrow::Borrow, marker::PhantomData};
 use xcm::latest::{Junction::*, Junctions::*, MultiLocation, NetworkId, Parent};
 use xcm_executor::traits::{Convert, InvertLocation};
+use sp_core::crypto::{Ss58AddressFormat, Ss58Codec};
+use sp_runtime::app_crypto::TryFrom;
 
 pub struct Account32Hash<Network, AccountId>(PhantomData<(Network, AccountId)>);
 impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone>
@@ -44,9 +46,17 @@ impl<AccountId: Default + Eq + Clone + From<[u8; 32]>> Convert<MultiLocation, Ac
 	fn convert_ref(location: impl Borrow<MultiLocation>) -> Result<AccountId, ()> {
 		match location.borrow() {
 			MultiLocation { parents: 1, interior: Here } => Ok(AccountId::default()),
-			MultiLocation { parents: 1, interior: X1(AccountId32 { id, network: NetworkId::Any }) } => {
-				Ok((*id).into())
-			}
+			// MultiLocation { parents: 1, interior: X1(AccountId32 { id, network: NetworkId::Any }) } => {
+			// 	Ok((*id).into())
+			// }
+			// MultiLocation { parents: 1, interior: X1(AccountId32 { id, network: NetworkId::Named(name) }) } => {
+			// 	let index = *(*name).get(0).unwrap();
+			// 	let address: Ss58AddressFormat = Ss58AddressFormat::try_from(index as u8).unwrap();
+			// 	let account: sp_runtime::AccountId32 = (*id).into();
+			// 	let parachain_account_address = account.to_ss58check_with_version(address);
+			// 	// change address to AccountId again? this's waste of time. the id never changed.
+			// 	Ok((*id).into())
+			// }
 			_ => Err(())
 		}
 		// if location.borrow().contains_parents_only(1) {
