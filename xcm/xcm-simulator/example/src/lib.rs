@@ -116,6 +116,7 @@ mod tests {
 	use xcm::latest::prelude::*;
 	use xcm_simulator::TestExt;
 	use crate::relay_chain::ProxyType;
+	use frame_system::ensure_signed;
 
 	// Helper function for forming buy execution message
 	fn buy_execution<C>(fees: impl Into<MultiAsset>) -> Instruction<C> {
@@ -194,8 +195,93 @@ mod tests {
 	}
 
 	#[test]
-	fn proxy_xcmp() {
+	fn anonymous_proxy() {
+		MockNet::reset();
 
+		Relay::execute_with(|| {
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE);
+			assert_eq!(relay_chain::Balances::free_balance(&ALICE), INITIAL_BALANCE);
+			assert_eq!(relay_chain::Balances::free_balance(&BOB), 0);
+
+			// this data should be consider with Proxy config on relay_chain runtime
+			let Proxy_Fee: u128 = 1000;
+
+			// transfer amount
+			let transfer_amount_to_anon: u128 = 2000;
+			let transfer_amount: u128 = 1000;
+
+			// make the call to be proxying
+			let call = Box::new(relay_chain::Call::Balances(
+				pallet_balances::Call::<relay_chain::Runtime>::transfer {
+					dest: BOB, // transfer money to Bob, which means Bob can spend Alice's money
+					value: transfer_amount,
+				},
+			));
+
+			// Alice proxy to Bob
+			// assert_ok!(RelayChainProxyPallet::add_proxy(
+			// 	relay_chain::Origin::signed(ALICE),
+			// 	BOB,
+			// 	ProxyType::Any,
+			// 	0
+			// ));
+
+			RelayChainProxyPallet::anonymous(
+				relay_chain::Origin::signed(ALICE),
+				ProxyType::Any,
+				0,
+				0
+			);
+
+			let anon = RelayChainProxyPallet::anonymous_account(&ALICE, &ProxyType::Any, 0, None);
+
+			// the real is anon, and the delegate is ALICE. key=anon is in the storage
+			let result = RelayChainProxyPallet::find_proxy(&anon, &ALICE,Some(ProxyType::Any)).unwrap();
+			println!("proxydef:{:?}", result);
+			assert_eq!(result.delegate, ALICE);
+			// if in turn, the result is empty, because there are no real proxy: Alice in the storage
+			let result = RelayChainProxyPallet::find_proxy( &ALICE, &anon,Some(ProxyType::Any));
+			assert_eq!(result.is_ok(), false);
+
+			let signed = relay_chain::Origin::signed(ALICE);
+			let who = ensure_signed(signed).unwrap();
+			println!("alice:{}", who);
+
+			let signed = relay_chain::Origin::signed(anon.clone());
+			let who = ensure_signed(signed).unwrap();
+			println!("anon:{}", who);
+			assert_eq!(anon.clone(), who);
+
+			// alice create an anonymous account, cost Proxy_Fee
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE - Proxy_Fee);
+
+			// transfer alice to anonymous account, so that anonymous account can transfer money
+			relay_chain::Balances::transfer(relay_chain::Origin::signed(ALICE), anon.clone(), transfer_amount_to_anon);
+
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE),
+					   INITIAL_BALANCE - Proxy_Fee - transfer_amount_to_anon);
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&anon), transfer_amount_to_anon);
+
+			// anon can do Alice's job
+			relay_chain::Proxy::proxy(
+				relay_chain::Origin::signed(ALICE),
+				anon.clone(),
+				None,
+				call.clone() // do the transfer
+			);
+
+			// alice's balance no change
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&ALICE), INITIAL_BALANCE - Proxy_Fee - transfer_amount_to_anon);
+			// anonymous balance reduce
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&anon), transfer_amount_to_anon - transfer_amount);
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&BOB), transfer_amount);
+
+			// we can also use anonymous account to transfer
+			// although anon has no private key, but it still can be Origin::signed()
+			relay_chain::Balances::transfer(relay_chain::Origin::signed(anon.clone()), BOB, 100);
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&anon), transfer_amount_to_anon - transfer_amount - 100);
+			assert_eq!(pallet_balances::Pallet::<relay_chain::Runtime>::free_balance(&BOB), transfer_amount + 100);
+		});
 	}
 
 	#[test]
