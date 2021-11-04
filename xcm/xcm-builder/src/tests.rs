@@ -40,6 +40,7 @@ fn basic_setup_works() {
 		Ok(42),
 	);
 	assert_eq!(to_account(Here.into()), Ok(3000));
+	assert_eq!(to_account(Parent.into()), Ok(3001));
 }
 
 #[test]
@@ -64,6 +65,17 @@ fn take_weight_credit_barrier_should_work() {
 	let r = TakeWeightCredit::should_execute(&Parent.into(), &mut message, 10, &mut weight_credit);
 	assert_eq!(r, Err(()));
 	assert_eq!(weight_credit, 0);
+}
+
+#[test]
+fn take_weight_credit_barrier_too_less() {
+	let mut message =
+		Xcm::<()>(vec![TransferAsset { assets: (Parent, 100).into(), beneficiary: Here.into() }]);
+	let mut weight_credit = 6;
+	let r = TakeWeightCredit::should_execute(&Parent.into(), &mut message, 10, &mut weight_credit);
+
+	assert_eq!(r, Err(()));
+	assert_eq!(weight_credit, 6);
 }
 
 #[test]
@@ -97,6 +109,7 @@ fn allow_paid_should_work() {
 	let mut message =
 		Xcm::<()>(vec![TransferAsset { assets: (Parent, 100).into(), beneficiary: Here.into() }]);
 
+	// TransferAsset is not top level
 	let r = AllowTopLevelPaidExecutionFrom::<IsInVec<AllowPaidFrom>>::should_execute(
 		&Parachain(1).into(),
 		&mut message,
@@ -105,6 +118,7 @@ fn allow_paid_should_work() {
 	);
 	assert_eq!(r, Err(()));
 
+	// fee limit less than max_weight
 	let fees = (Parent, 1).into();
 	let mut underpaying_message = Xcm::<()>(vec![
 		ReserveAssetDeposited((Parent, 100).into()),
@@ -127,6 +141,7 @@ fn allow_paid_should_work() {
 		DepositAsset { assets: All.into(), max_assets: 1, beneficiary: Here.into() },
 	]);
 
+	// origin:Parachain(1) not exists in AllowPaidFrom which is [Parent]
 	let r = AllowTopLevelPaidExecutionFrom::<IsInVec<AllowPaidFrom>>::should_execute(
 		&Parachain(1).into(),
 		&mut paying_message,
@@ -135,6 +150,7 @@ fn allow_paid_should_work() {
 	);
 	assert_eq!(r, Err(()));
 
+	// origin ok, top level ok, weight limit ok
 	let r = AllowTopLevelPaidExecutionFrom::<IsInVec<AllowPaidFrom>>::should_execute(
 		&Parent.into(),
 		&mut paying_message,
@@ -142,6 +158,24 @@ fn allow_paid_should_work() {
 		&mut 0,
 	);
 	assert_eq!(r, Ok(()));
+
+	// unlimited weight
+	let fees = (Parent, 1).into();
+	let mut paying_message = Xcm::<()>(vec![
+		ReserveAssetDeposited((Parent, 100).into()),
+		BuyExecution { fees, weight_limit: Unlimited },
+		DepositAsset { assets: All.into(), max_assets: 1, beneficiary: Here.into() },
+	]);
+	let r = AllowTopLevelPaidExecutionFrom::<IsInVec<AllowPaidFrom>>::should_execute(
+		&Parent.into(),
+		&mut paying_message,
+		30,
+		&mut 0,
+	);
+	assert_eq!(r, Ok(()));
+	if let BuyExecution{ weight_limit, ..} = paying_message.0.get(1).unwrap() {
+		assert_eq!(*weight_limit, Limited(30));
+	}
 }
 
 #[test]
@@ -160,6 +194,9 @@ fn paying_reserve_deposit_should_work() {
 	let r = XcmExecutor::<TestConfig>::execute_xcm(Parent, message, weight_limit);
 	assert_eq!(r, Outcome::Complete(30));
 	assert_eq!(assets(3000), vec![(Parent, 70).into()]);
+
+	println!("3001:{:?}", assets(3001));
+	println!("3000:{:?}", assets(3000));
 }
 
 #[test]
@@ -168,7 +205,7 @@ fn transfer_should_work() {
 	AllowUnpaidFrom::set(vec![X1(Parachain(1)).into()]);
 	// Child parachain #1 owns 1000 tokens held by us in reserve.
 	add_asset(1001, (Here, 1000));
-	// They want to transfer 100 of them to their sibling parachain #2
+	// They want to transfer 100 of them to account on current chain
 	let r = XcmExecutor::<TestConfig>::execute_xcm(
 		Parachain(1),
 		Xcm(vec![TransferAsset {
@@ -181,6 +218,50 @@ fn transfer_should_work() {
 	assert_eq!(assets(3), vec![(Here, 100).into()]);
 	assert_eq!(assets(1001), vec![(Here, 900).into()]);
 	assert_eq!(sent_xcm(), vec![]);
+}
+
+#[test]
+fn basic_asset_trap() {
+	// we'll let them have message execution for free.
+	AllowUnpaidFrom::set(vec![X1(Parachain(1)).into(), X1(Parachain(2)).into()]);
+
+	// Child parachain #1 owns 1000 tokens held by us in reserve.
+	add_asset(1001, (Here, 1000));
+
+	let r = XcmExecutor::<TestConfig>::execute_xcm(
+		Parachain(1).into(),
+		Xcm(vec![
+			WithdrawAsset((Here, 100).into()),
+			DepositAsset {
+				assets: Wild(All),
+				max_assets: 0, //< Whoops!
+				beneficiary: AccountIndex64 { index: 3, network: Any }.into(),
+			},
+		]),
+		20,
+	);
+	assert_eq!(r, Outcome::Complete(25));
+	assert_eq!(assets(1001), vec![(Here, 900).into()]);
+	assert_eq!(assets(3), vec![]);
+
+	let r = XcmExecutor::<TestConfig>::execute_xcm(
+		Parachain(1).into(),
+		Xcm(vec![
+			ClaimAsset {
+				assets: (Here, 100).into(),
+				ticket: GeneralIndex(0).into()
+			},
+			DepositAsset {
+				assets: Wild(All),
+				max_assets: 1,
+				beneficiary: AccountIndex64 { index: 4, network: Any }.into(),
+			},
+		]),
+		20,
+	);
+	assert_eq!(r, Outcome::Complete(20));
+	assert_eq!(assets(1001), vec![(Here, 900).into()]);
+	assert_eq!(assets(4), vec![(Here, 100).into()]);
 }
 
 #[test]
@@ -447,6 +528,7 @@ fn reserve_transfer_should_work() {
 	);
 	assert_eq!(r, Outcome::Complete(10));
 
+	assert_eq!(assets(1001), vec![(Here, 900).into()]);
 	assert_eq!(assets(1002), vec![(Here, 100).into()]);
 	assert_eq!(
 		sent_xcm(),
