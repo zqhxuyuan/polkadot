@@ -58,10 +58,11 @@ pub mod pallet {
 	use xcm_executor::{
 		traits::{
 			ClaimAssets, DropAssets, InvertLocation, OnResponse, VersionChangeNotifier,
-			WeightBounds,
+			WeightBounds, GetByKey,
 		},
 		Assets,
 	};
+	use xcm_builder::TakeRevenue;
 
 	parameter_types! {
 		/// An implementation of `Get<u32>` which just returns the latest XCM version which we can
@@ -111,6 +112,10 @@ pub mod pallet {
 
 		/// The outer `Origin` type.
 		type Origin: From<Origin> + From<<Self as SysConfig>::Origin>;
+
+		type TakeRevenue: TakeRevenue;
+
+		type ExistentialDeposits: GetByKey<AssetId, u128>;
 
 		/// The outer `Call` type.
 		type Call: Parameter
@@ -1274,10 +1279,31 @@ pub mod pallet {
 			if assets.is_empty() {
 				return 0
 			}
-			let versioned = VersionedMultiAssets::from(MultiAssets::from(assets));
-			let hash = BlakeTwo256::hash_of(&(&origin, &versioned));
-			AssetTraps::<T>::mutate(hash, |n| *n += 1);
-			Self::deposit_event(Event::AssetsTrapped(hash, origin.clone(), versioned));
+			let multi_assets: Vec<MultiAsset> = assets.clone().into();
+			let mut asset_traps: Vec<MultiAsset> = vec![];
+			for asset in multi_assets {
+				if let MultiAsset {
+					id: assetId,
+					fun: Fungible(amount),
+				} = asset.clone()
+				{
+					let ed = T::ExistentialDeposits::get(&assetId);
+					match ed {
+						Some(ed) if amount < ed => {
+							T::TakeRevenue::take_revenue(asset);
+						},
+						_ => {
+							asset_traps.push(asset);
+						}
+					}
+				}
+			}
+			if !asset_traps.is_empty() {
+				let versioned = VersionedMultiAssets::from(MultiAssets::from(assets));
+				let hash = BlakeTwo256::hash_of(&(&origin, &versioned));
+				AssetTraps::<T>::mutate(hash, |n| *n += 1);
+				Self::deposit_event(Event::AssetsTrapped(hash, origin.clone(), versioned));
+			}
 			// TODO #3735: Put the real weight in there.
 			0
 		}
@@ -1299,6 +1325,7 @@ pub mod pallet {
 				(0, Here) => (),
 				_ => return false,
 			};
+
 			let hash = BlakeTwo256::hash_of(&(origin, versioned));
 			match AssetTraps::<T>::get(hash) {
 				0 => return false,

@@ -34,3 +34,5 @@ mod transact_asset;
 pub use transact_asset::TransactAsset;
 mod weight;
 pub use weight::{WeightBounds, WeightTrader};
+mod get_by_key;
+pub use get_by_key::GetByKey;

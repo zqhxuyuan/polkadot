@@ -188,6 +188,8 @@ impl pallet_xcm::Config for Runtime {
 	type XcmTeleportFilter = Everything;
 	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
+	type TakeRevenue = ();
+	type ExistentialDeposits = ();
 	type Call = Call;
 	type Origin = Origin;
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
