@@ -511,7 +511,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_sibling_reanchor_tokens() {
+	fn test_reanchor_from_bifrost() {
 		use frame_support::parameter_types;
 		parameter_types! {
 			pub Ancestry: MultiLocation = X1(Parachain(2001)).into();
@@ -520,18 +520,29 @@ mod tests {
 		let inv_dest = LocationInverter::<Ancestry>::invert_location(&dest).unwrap();
 		assert_eq!(inv_dest, (1, Parachain(2001)).into());
 
-		// the GeneralKey(BNC) belong to Parachain(2001)
+		// bifrost->[BNC]->karura
 		let mut asset: MultiAsset = ((0, GeneralKey("BNC".as_bytes().to_vec())), 100u128).into();
 		asset.reanchor(&inv_dest);
 		assert_eq!(asset, ((1, X2(Parachain(2001), GeneralKey("BNC".as_bytes().to_vec()))), 100).into());
 
-		// the GeneralKey(KAR) and GeneralKey(KUSD) belong to Parachain(2000)
-		let mut asset: MultiAsset = ((1, X2(Parachain(2000), GeneralKey("KAR".as_bytes().to_vec()))), 100u128).into();
-		asset.reanchor(&inv_dest);
-		assert_eq!(asset, ((1, X2(Parachain(2000), GeneralKey("KAR".as_bytes().to_vec()))), 100).into());
-
+		// bifrost->[KAR/KUSD]->karura
 		let mut asset: MultiAsset = ((1, Parachain(2000), GeneralKey("KUSD".as_bytes().to_vec())), 100u128).into();
 		asset.reanchor(&inv_dest);
 		assert_eq!(asset, ((1, Parachain(2000), GeneralKey("KUSD".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[KSM: Kusama]->karura
+		let mut asset: MultiAsset = ((1, GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[KSM: Statemine]->karura
+		let mut asset: MultiAsset = ((1, Parachain(1000), GeneralKey("KUSD".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), GeneralKey("KUSD".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[USDT: Statemine]->karura
+		let mut asset: MultiAsset = ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100).into());
 	}
 }
