@@ -545,4 +545,191 @@ mod tests {
 		asset.reanchor(&inv_dest);
 		assert_eq!(asset, ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100).into());
 	}
+
+	#[test]
+	fn test_reanchor_bifrost_to_karura() {
+		use frame_support::parameter_types;
+		parameter_types! {
+			pub Ancestry: MultiLocation = X1(Parachain(2001)).into();
+		}
+		let dest: MultiLocation = (1, Parachain(2000)).into();
+		let inv_dest = LocationInverter::<Ancestry>::invert_location(&dest).unwrap();
+		assert_eq!(inv_dest, (1, Parachain(2001)).into());
+
+		// bifrost->[BNC]->karura
+		let mut asset: MultiAsset = ((0, GeneralKey("BNC".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		/// the reanchor results show that in karura side, it recognize BNC as (Parent, 2001, BNC)
+		assert_eq!(asset, ((1, X2(Parachain(2001), GeneralKey("BNC".as_bytes().to_vec()))), 100).into());
+
+		let mut asset: MultiAsset = ((1, Parachain(2001), GeneralKey("BNC".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, X2(Parachain(2001), GeneralKey("BNC".as_bytes().to_vec()))), 100).into());
+
+		// bifrost->[KAR/KUSD]->karura
+		let mut asset: MultiAsset = ((1, Parachain(2000), GeneralKey("KAR".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		/// old way: karura recognize KAR as (Parent, 2000, KAR). 🔥
+		assert_eq!(asset, ((1, Parachain(2000), GeneralKey("KAR".as_bytes().to_vec())), 100).into());
+		/// new way: karura recognize KAR as GeneralKey(KAR)
+		// assert_eq!(asset, ((0, GeneralKey("KAR".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[KSM: Kusama]->karura
+		let mut asset: MultiAsset = ((1, GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[KSM: Statemine]->karura
+		let mut asset: MultiAsset = ((1, Parachain(1000), GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[USDT: Statemine Assets]->karura
+		let mut asset: MultiAsset = ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100).into());
+	}
+
+	#[test]
+	fn test_reanchor_bifrost_to_statemine() {
+		// let dest: MultiLocation = (1, Parachain(1000)).into();
+		// let ancestry: MultiLocation = Parachain(2001).into();
+		use frame_support::parameter_types;
+		parameter_types! {
+			pub Ancestry: MultiLocation = X1(Parachain(2001)).into();
+		}
+		let dest: MultiLocation = (1, Parachain(1000)).into();
+		let inv_dest = LocationInverter::<Ancestry>::invert_location(&dest).unwrap();
+		assert_eq!(inv_dest, (1, Parachain(2001)).into());
+
+		// bifrost->[KSM: Kusama]->statemine
+		let mut asset: MultiAsset = ((1, GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[KSM: Statemine]->statemine
+		let mut asset: MultiAsset = ((1, Parachain(1000), GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+		// assert_eq!(asset, ((0, GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// bifrost->[USDT: Statemine Assets]->statemine
+		let mut asset: MultiAsset = ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100).into());
+		// assert_eq!(asset, ((0, PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100).into());
+	}
+
+	#[test]
+	fn test_reanchor_statemine_to_bifrost() {
+		// let dest: MultiLocation = (1, Parachain(2001)).into();
+		// let ancestry: MultiLocation = Parachain(1000).into();
+		use frame_support::parameter_types;
+		parameter_types! {
+			pub Ancestry: MultiLocation = X1(Parachain(1000)).into();
+		}
+		let dest: MultiLocation = (1, Parachain(2001)).into();
+		let inv_dest = LocationInverter::<Ancestry>::invert_location(&dest).unwrap();
+		assert_eq!(inv_dest, (1, Parachain(1000)).into());
+
+		// statemine->[KSM: Kusama]->bifrost
+		let mut asset: MultiAsset = ((1, GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// statemine->[KSM: Statemine]->bifrost
+		let mut asset: MultiAsset = ((1, Parachain(1000), GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		let mut asset: MultiAsset = ((0, GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// statemine->[USDT: Statemine Assets]->bifrost
+		let mut asset: MultiAsset = ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100).into());
+
+		let mut asset: MultiAsset = ((0, PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((1, Parachain(1000), PalletInstance(50), GeneralKey("USDT".as_bytes().to_vec())), 100).into());
+	}
+
+	#[test]
+	fn test_reanchor_statemine_and_parent() {
+		use frame_support::parameter_types;
+
+		// Statemine->[KUSD index: Statemine]->Parent
+		parameter_types! {
+			pub Ancestry: MultiLocation = X1(Parachain(1000)).into();
+		}
+		let dest: MultiLocation = Parent.into();
+		let inv_dest = LocationInverter::<Ancestry>::invert_location(&dest).unwrap();
+		assert_eq!(inv_dest, (0, Parachain(1000)).into());
+
+		let mut asset: MultiAsset = ((0, PalletInstance(50), GeneralIndex(0)), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((0, Parachain(1000), PalletInstance(50), GeneralIndex(0)), 100).into());
+
+		let mut asset: MultiAsset = ((1, Parachain(1000), PalletInstance(50), GeneralIndex(0)), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((0, Parachain(1000), PalletInstance(50), GeneralIndex(0)), 100).into());
+
+		// Parent->[KUSD index: Statemine]->Statemine
+		parameter_types! {
+			pub Ancestry2: MultiLocation = Here.into();
+		}
+		let dest: MultiLocation = (0, Parachain(2001)).into();
+		let inv_dest = LocationInverter::<Ancestry2>::invert_location(&dest).unwrap();
+		assert_eq!(inv_dest, Parent.into());
+
+		let mut asset: MultiAsset = ((0, Parachain(2001), PalletInstance(50), GeneralIndex(0)), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((Parent,  Parachain(2001), PalletInstance(50), GeneralIndex(0)), 100).into());
+	}
+
+	#[test]
+	fn test_reanchor_bifrost_to_parent() {
+		use frame_support::parameter_types;
+		parameter_types! {
+			pub Ancestry: MultiLocation = X1(Parachain(2001)).into();
+		}
+		let dest: MultiLocation = Parent.into();
+		let inv_dest = LocationInverter::<Ancestry>::invert_location(&dest).unwrap();
+		assert_eq!(inv_dest, (0, Parachain(2001)).into());
+
+		// bifrost->[KSM: Kusama]->kusama
+		let mut asset: MultiAsset = ((1, GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((0, GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// suppose bifrost also has Assets pallet. If bifrost want to transfer the asset to parent?
+		// bifrost->[USDT: bifrost]->kusama just like statemine->[USDT: statemine]->kusama
+		let mut asset: MultiAsset = ((0, PalletInstance(50), GeneralIndex(0)), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((0, Parachain(2001), PalletInstance(50), GeneralIndex(0)), 100).into());
+	}
+
+	#[test]
+	fn test_reanchor_parent_to_bifrost() {
+		use frame_support::parameter_types;
+		parameter_types! {
+			pub Ancestry: MultiLocation = Here.into();
+		}
+		let dest: MultiLocation = (0, Parachain(2001)).into();
+		let inv_dest = LocationInverter::<Ancestry>::invert_location(&dest).unwrap();
+		assert_eq!(inv_dest, Parent.into());
+
+		// kusama->[KSM: Kusama]->bifrost
+		let mut asset: MultiAsset = ((0, GeneralKey("KSM".as_bytes().to_vec())), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((Parent, GeneralKey("KSM".as_bytes().to_vec())), 100).into());
+
+		// suppose bifrost also has Assets pallet. If Relaychain want to transfer the asset in bifrost to bifrost?
+		// kusama->[USDT: bifrost]->bifrost
+		let mut asset: MultiAsset = ((0, Parachain(2001), PalletInstance(50), GeneralIndex(0)), 100u128).into();
+		asset.reanchor(&inv_dest);
+		assert_eq!(asset, ((Parent,  Parachain(2001), PalletInstance(50), GeneralIndex(0)), 100).into());
+	}
 }
