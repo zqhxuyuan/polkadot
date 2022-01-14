@@ -24,7 +24,7 @@ polkadot-statement-table = { path = "../../statement-table" }
 polkadot-node-jaeger = { path = "../jaeger" }
 polkadot-procmacro-subsystem-dispatch-gen = { path = "dispatch-gen" }
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "master" }
-smallvec = "1.6.1"
+smallvec = "1.8.0"
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "master" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "master" }
 thiserror = "1.0.23"
